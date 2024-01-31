@@ -1,0 +1,128 @@
+project
+|-- main.tf
+|-- variables.tf
+|-- outputs.tf
+|-- ec2
+|   |-- main.tf
+
+
+provider "aws" {
+  region = var.aws_region
+}
+
+# ALB, Target Groups, and Targets
+resource "aws_lb" "example_alb" {
+  name               = var.alb_name
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = []  # Add security groups as needed
+  subnets            = var.subnet_ids
+  enable_deletion_protection = false  # Adjust as needed
+
+  tags = {
+    Name = var.alb_name
+    # Add more tags as needed
+  }
+}
+
+resource "aws_lb_listener" "example_listener" {
+  load_balancer_arn = aws_lb.example_alb.arn
+  port              = var.listener_port
+  protocol          = "HTTP"
+}
+
+resource "aws_lb_target_group" "example_target_group" {
+  count = var.target_group_count
+
+  name     = "example-target-group-${count.index + 1}"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
+
+  health_check {
+    path = "/"
+  }
+
+  depends_on = [aws_lb.example_alb]
+}
+
+# Output the ALB DNS name for convenience
+output "alb_dns_name" {
+  value = aws_lb.example_alb.dns_name
+}
+
+
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+}
+
+variable "alb_name" {
+  description = "ALB name"
+  type        = string
+}
+
+variable "listener_port" {
+  description = "ALB listener port"
+  type        = number
+}
+
+variable "target_group_count" {
+  description = "Number of target groups"
+  type        = number
+}
+
+variable "subnet_ids" {
+  description = "List of subnet IDs for EC2 instances"
+  type        = list(string)
+}
+
+variable "vpc_id" {
+  description = "VPC ID"
+  type        = string
+}
+
+
+output "alb_dns_name" {
+  value = aws_lb.example_alb.dns_name
+}
+
+
+resource "aws_instance" "example_instance" {
+  count = length(var.subnet_ids)
+
+  ami           = var.ami
+  instance_type = var.instance_type
+  subnet_id     = var.subnet_ids[count.index]
+  key_name      = var.key_name
+
+  user_data = <<-EOF
+              #!/bin/bash
+              echo "<h1>Hello, World!</h1>" > index.html
+              nohup python -m SimpleHTTPServer 80 &
+              EOF
+
+  tags = {
+    Name = "example-instance-${count.index + 1}"
+    # Add more tags as needed
+  }
+}
+
+resource "aws_lb_target_group_attachment" "example_attachment" {
+  count             = length(var.subnet_ids)
+  target_group_arn = aws_lb_target_group.example_target_group[count.index].arn
+  target_id        = aws_instance.example_instance[count.index].id
+}
+
+
+aws_region        = "us-east-1"
+alb_name          = "example-alb"
+listener_port     = 80
+target_group_count = 2
+subnet_ids        = ["subnet-id-1", "subnet-id-2"]  # Replace with your actual subnet IDs
+vpc_id            = "vpc-id"  # Replace with your actual VPC ID
+
+
+
+terraform init
+terraform apply -var-file=terraform.tfvars
