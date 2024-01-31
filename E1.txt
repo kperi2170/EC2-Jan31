@@ -57,3 +57,12 @@ resource "local_file" "TF-key" {
     content  = tls_private_key.rsa.private_key_pem
     filename = "tfkey"
 }
+
+
+
+!/bin/bash
+yum update -y
+yum install -y httpd.x86_64
+systemctl start httpd.service
+systemctl enable httpd.service
+echo “Hello CloudChamp from $(hostname -f).Created by USERDATA in Terraform. SUBSCRIBE NOW!!” (arrow_symbol) /var/www/html/index.html
