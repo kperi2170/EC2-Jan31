@@ -1,0 +1,59 @@
+echo "# EC2-Jan31" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/kperi2170/EC2-Jan31.git
+git push -u origin main
+
+
+git remote add origin https://github.com/kperi2170/EC2-Jan31.git
+git branch -M main
+git push -u origin main
+
+
+Create AWS Keypair with Terraform tool through this tutorial video to SSH in your EC2 instance. In this demo you will 2 ways to create and attach your AWS keypair using Infrastructure as a code tool TERRAFORM!
+
+Terraform Documentation link:
+
+Resource: aws_key_pair: https://registry.terraform.io/provide...
+
+tls_private_key:
+https://registry.terraform.io/provide...
+
+local_file:
+https://registry.terraform.io/provide...
+
+-----------------------------------------------------------------------------------------------------------------------
+
+#terraform code 
+
+resource "aws_instance" "web" {
+  ami           = "ami-00ee4df451840fa9d" #Amazon Linux AMI
+  instance_type = "t2.micro"
+  security_groups = [aws_security_group.TF_SG.name]
+  #first method
+  key_name = "TF_key"
+  
+
+  tags = {
+    Name = "Terraform Ec2"
+  }
+}
+
+#keypair second method for Key_pair
+
+resource "aws_key_pair" "TF_key" {
+  key_name   = "TF_key"
+  public_key = tls_private_key.rsa.public_key_openssh
+}
+
+resource "tls_private_key" "rsa" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+resource "local_file" "TF-key" {
+    content  = tls_private_key.rsa.private_key_pem
+    filename = "tfkey"
+}
